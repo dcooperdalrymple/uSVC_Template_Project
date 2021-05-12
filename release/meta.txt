@@ -1,0 +1,13 @@
+Template
+Basic uSVC
+Template
+for
+Linux
+Basic Template
+to start your
+uSVC game
+in Linux.
+Your
+Name
+MMDDYYYY
+V1.00
