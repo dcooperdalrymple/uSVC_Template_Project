@@ -20,7 +20,7 @@ INCS	?= -I./cmsis/samd21 \
 		   -I./cmsis/thirdparty
 XCPU 	?= -mcpu=cortex-m0plus
 
-CFLAGS	:= -x c -mthumb -D__$(TARGETU)__ -DDEBUG $(INCS) -O3 -ffunction-sections -mlong-calls -Wall $(XCPU) -c -std=gnu99 -MD -MP -MF "Device_Startup/startup_samd21.d" -MT"Device_Startup/startup_samd21.d" -MT"Device_Startup/startup_samd21.o"
+CFLAGS	:= -x c -mthumb -D__$(TARGETU)__ $(INCS) -O3 -ffunction-sections -mlong-calls -Wall $(XCPU) -c -std=gnu99 -MD -MP -MF "Device_Startup/startup_samd21.d" -MT"Device_Startup/startup_samd21.d" -MT"Device_Startup/startup_samd21.o"
 LFLAGS 	:= -mthumb -Wl,-Map="$(PROJECT).map" --specs=nano.specs --specs=nosys.specs -Wl,--start-group -Wl,--end-group -L"./Device_Startup" -Wl,--gc-sections $(XCPU) -T$(TARGETL)_flash.ld
 
 BOSSAC	?= ./bin/bossac
@@ -34,7 +34,17 @@ OBJDUMP	:= $(ARMGNU)objdump
 OBJCOPY	:= $(ARMGNU)objcopy
 SIZE	:= $(ARMGNU)size
 
-all: clean $(PROJECT).bin
+all: build
+
+build: $(PROJECT).bin
+
+rebuild: clean $(PROJECT).bin
+
+debug: CFLAGS+=-DDEBUG
+debug: clean $(PROJECT).bin bossac
+
+release: CFLAGS+=-DUSE_BOOTLOADER
+release: clean $(PROJECT).bin package
 
 $(PROJECT).bin: $(OBJS)
 	$(LD) -o $(PROJECT).elf $(OBJS) $(LFLAGS)
@@ -51,10 +61,7 @@ $(PROJECT).bin: $(OBJS)
 %.o: %.c
 	$(CC) $(CFLAGS) -o $@ $<
 
-clean:
-	rm -rfv *.bin *.o *.elf *.lst *.eep *.lss *.srec Device_Startup/*.o usvc_kernel/*.o
-
-debug:
+bossac:
 	$(BOSSAC) -d -i -e -w  -o 0x2000 -R ./release/binary.bin --port=$(PORT)
 
 package:
@@ -67,3 +74,6 @@ editor:
 list:
 	dmesg | grep -i itaca
 	dmesg | grep -i acm
+
+clean:
+	rm -rfv *.bin *.o *.elf *.lst *.eep *.lss *.srec Device_Startup/*.o usvc_kernel/*.o
