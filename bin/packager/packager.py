@@ -13,6 +13,7 @@
 try:
     import sys
     import math
+    from os import path
 except ImportError as err:
     print("Could not load {} module.".format(err))
     raise SystemExit
@@ -97,7 +98,7 @@ class USCPackager:
             binData = open(binFilePath, mode="rb").read()
 
             # For simplicity copy binData to a 4-byte aligned array
-            tmpBin = [0 for i in range(0, int(4 * ((len(binData) + 3) / 4)))]
+            tmpBin = [0 for i in range(0, int(4 * math.floor((len(binData) + 3) / 4)))]
             for i in range(0, len(binData)):
                 tmpBin[i] = binData[i]
             binData = tmpBin
@@ -124,7 +125,7 @@ class USCPackager:
         if error == 0:
 
             # Calculate USC file length
-            uscLength = int(512 + 512 * ((self.PREVIEW_WIDTH * self.PREVIEW_HEIGHT + 511) / 512) + len(binData))
+            uscLength = int(512 + 512 * math.floor((self.PREVIEW_WIDTH * self.PREVIEW_HEIGHT + 511) / 512) + len(binData))
             print("Final USC file size: {:d}".format(uscLength))
             finalUSC = [0 for i in range(0, uscLength)]
 
@@ -156,8 +157,8 @@ class USCPackager:
 
             # Copy length @8
             for i in range(0, 4):
-                finalUSC[8 + i] = ((len(binData) >> i * 8) & 0xFF)
-                print("Bin Length byte: {0:0{1}x}".format(finalUSC[8 + i] & 0xFF, 2))
+                finalUSC[8 + i] = (int(len(binData) >> i * 8) & 0xFF)
+                print("Bin Length byte: {:d}".format(finalUSC[8 + i] & 0xFF))
             print("Bin Length: {:d}".format(len(binData)))
 
             # Copy short title @32
@@ -217,14 +218,25 @@ class USCPackagerCLI:
             raise SystemExit
 
         # Help message
-        elif sys.argv[1] == "-h" or sys.argv[1] == "-help" or sys.argv[1] == "--help":
-            print("Help message here...")
+        elif '-h' in sys.argv[1:] or '--help' in sys.argv[1:]:
+            print("Compiled .bin file, meta .txt file, and image.png must be provided to package into .usc file.")
+            print("Specify these files with the following options:")
+            print("\t-b \"*.bin\" (defaults to ./binary.bin)")
+            print("\t-m \"*.txt\" (defaults to ./meta.txt, see https://next-hack.com/index.php/2021/05/02/usvc-tutorial-8-how-to-run-usvc-games-from-sd-card/ for details)")
+            print("\t-i \"*.png\" (defaults to ./image.png, use dimensions 96x72)")
+            print("\t-o \"*.usc\" (defaults to game.usc)")
+            print("\t-d \"./dir/\" (set a the working directory for all of these files, useful if keeping the default file names)")
             raise SystemExit
 
-        binFilePath = ""
-        metaFilePath = ""
-        imageFilePath = ""
-        outputFilePath = ""
+        # Version
+        elif '-v' in sys.argv[1:] or '--version' in sys.argv[1:]:
+            print("uSVC USC Packager - Version 0.10")
+            raise SystemExit
+
+        binFilePath = "binary.bin"
+        metaFilePath = "meta.txt"
+        imageFilePath = "image.png"
+        outputFilePath = "game.usc"
 
         for i in range(1, len(sys.argv)):
             if sys.argv[i] == '-b':
@@ -235,9 +247,21 @@ class USCPackagerCLI:
                 imageFilePath = sys.argv[i + 1]
             elif sys.argv[i] == '-o':
                 outputFilePath = sys.argv[i + 1]
+            elif sys.argv[i] == '-d':
+                slash = "/"
+                if sys.argv[i + 1].endswith("/"):
+                    slash = ""
+                binFilePath = sys.argv[i + 1] + slash + binFilePath
+                metaFilePath = sys.argv[i + 1] + slash + metaFilePath
+                imageFilePath = sys.argv[i + 1] + slash + imageFilePath
+                outputFilePath = sys.argv[i + 1] + slash + outputFilePath
 
             # Skip file path index
             i = i + 1
+
+        if not binFilePath or not metaFilePath or not imageFilePath or not outputFilePath or not path.exists(binFilePath) or not path.exists(metaFilePath) or not path.exists(imageFilePath):
+            print("Invalid file paths provided.")
+            raise SystemExit
 
         packager = USCPackager()
         packager.createPackage(binFilePath, metaFilePath, imageFilePath, outputFilePath)

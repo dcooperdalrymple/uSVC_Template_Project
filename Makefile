@@ -24,6 +24,7 @@ CFLAGS	:= -x c -mthumb -D__$(TARGETU)__ -DDEBUG $(INCS) -O3 -ffunction-sections 
 LFLAGS 	:= -mthumb -Wl,-Map="$(PROJECT).map" --specs=nano.specs --specs=nosys.specs -Wl,--start-group -Wl,--end-group -L"./Device_Startup" -Wl,--gc-sections $(XCPU) -T$(TARGETL)_flash.ld
 
 BOSSAC	?= ./bin/bossac
+PACKAGER ?= ./bin/packager/packager.py
 EDITOR	?= ./bin/editor/uChipPlayMapEditor.jar
 
 ARMGNU	?= arm-none-eabi-
@@ -55,6 +56,10 @@ clean:
 
 debug:
 	$(BOSSAC) -d -i -e -w  -o 0x2000 -R ./release/binary.bin --port=$(PORT)
+
+package:
+	python3 $(PACKAGER) -d ./release
+	cp ./release/game.usc ./release/$(PROJECT).usc
 
 editor:
 	java -jar $(EDITOR)
