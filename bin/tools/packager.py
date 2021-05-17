@@ -19,10 +19,10 @@ except ImportError as err:
     raise SystemExit
 
 from utilities import Utilities
-from color import USVCColor
-from palette import USVCPalette
+from color import Color
+from palette import Palette
 
-class USCPackager:
+class Packager:
 
     USVCHEADER = "USVC"
     version = "0.0"
@@ -36,21 +36,10 @@ class USCPackager:
     VERSION_LENGTH = 5
 
     def __init__(self):
-        self.palette = USVCPalette()
+        Palette.calculate()
 
     def convertToUSVCPreview(self, image):
-        buffer = [0 for i in range(0, self.PREVIEW_WIDTH * self.PREVIEW_HEIGHT)]
-
-        for i in range(0, self.PREVIEW_WIDTH * self.PREVIEW_HEIGHT):
-            x = i % self.PREVIEW_WIDTH
-            y = int(math.floor(i / self.PREVIEW_WIDTH))
-
-            tile = int(math.floor(x / 8) + math.floor(y / 8) * math.floor(self.PREVIEW_WIDTH / 8))
-            tileX = x % 8
-            tileY = y % 8
-
-            buffer[tile * 64 + 8 * tileY + tileX] = self.palette.getByte(image.getpixel((x, y)))
-
+        buffer = Utilities.getImageBuffer(image, self.PREVIEW_WIDTH, self.PREVIEW_HEIGHT)
         return buffer
 
     def createPackage(self, binFilePath, metaFilePath, imageFilePath, outputFilePath):
@@ -104,12 +93,7 @@ class USCPackager:
             binData = tmpBin
 
             # Calculate checksum
-            for i in range(0, int(len(binData) / 4)):
-                b0 = 0xFF & binData[i * 4]
-                b1 = 0xFF & binData[(i * 4) + 1]
-                b2 = 0xFF & binData[(i * 4) + 2]
-                b3 = 0xFF & binData[(i * 4) + 3]
-                checkSum += b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)
+            checkSum = Utilities.calculateCheckSum(binData)
 
         except IOError as err:
             print("Could not read bin file, {}: {}.".format(binFilePath, err))
@@ -209,7 +193,7 @@ class USCPackager:
         else:
             return False
 
-class USCPackagerCLI:
+class PackagerCLI:
 
     def __init__(self):
         # No input, prompt user
@@ -230,7 +214,7 @@ class USCPackagerCLI:
 
         # Version
         elif '-v' in sys.argv[1:] or '--version' in sys.argv[1:]:
-            print("uSVC USC Packager - Version 0.10")
+            print("uSVC USC Packager - Version 0.11")
             raise SystemExit
 
         binFilePath = "binary.bin"
@@ -263,8 +247,8 @@ class USCPackagerCLI:
             print("Invalid file paths provided.")
             raise SystemExit
 
-        packager = USCPackager()
+        packager = Packager()
         packager.createPackage(binFilePath, metaFilePath, imageFilePath, outputFilePath)
 
 if __name__ == "__main__":
-    USCPackagerCLI()
+    PackagerCLI()
